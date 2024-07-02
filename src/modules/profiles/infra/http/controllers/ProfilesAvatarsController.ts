@@ -12,12 +12,12 @@ class ProfilesAvatarsController {
 			UpdateProfileAvatarService,
 		);
 
-		const profile = await updateProfileAvatarService.execute({
+		await updateProfileAvatarService.execute({
 			userId,
 			avatar: file?.filename,
 		});
 
-		return res.status(200).json(profile);
+		return res.status(200).send();
 	}
 }
 

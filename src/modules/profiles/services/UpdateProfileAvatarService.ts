@@ -4,6 +4,7 @@ import { inject, injectable } from "tsyringe";
 import ProfileNotFoundError from "@shared/errors/app/ProfileNotFoundError";
 import { IProfilesRepository } from "../repositories/profiles/IProfilesRepository";
 import { IStorageProvider } from "@shared/containers/providers/StorageProvider/models/IStorageProvider";
+import { ICacheProvider } from "@shared/containers/providers/CacheProvider/models/ICacheProvider";
 
 interface IRequest {
 	userId: string;
@@ -18,6 +19,9 @@ class UpdateProfileAvatarService {
 
 		@inject("StorageProvider")
 		private storageProvider: IStorageProvider,
+
+		@inject("CacheProvider")
+		private cacheProvider: ICacheProvider,
 	) {}
 
 	async execute({ userId, avatar }: IRequest) {
@@ -41,7 +45,14 @@ class UpdateProfileAvatarService {
 		// Save new avatar
 		if (avatar) await this.storageProvider.saveFile(avatar);
 
-		await this.profilesRepository.updateAvatar({ userId, avatar });
+		// Update avatar
+		await this.profilesRepository.updateAvatar({
+			userId,
+			avatar,
+		});
+
+		// Invalidate old cache
+		await this.cacheProvider.invalidate(`profiles:${userId}`);
 	}
 }
 

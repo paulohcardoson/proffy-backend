@@ -16,6 +16,8 @@ class ProfilesController {
 	}
 
 	async update(req: Request, res: Response) {
+		const { name, bio, phone_number } = req.body;
+
 		const userId = req.userId as string;
 		const updateProfileInfoService = container.resolve(
 			UpdateProfileInfoService,
@@ -23,7 +25,9 @@ class ProfilesController {
 
 		const profile = await updateProfileInfoService.execute({
 			userId,
-			...req.body,
+			name,
+			bio,
+			phoneNumber: phone_number,
 		});
 
 		return res.status(200).json(profile);

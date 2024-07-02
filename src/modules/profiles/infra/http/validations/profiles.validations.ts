@@ -7,7 +7,7 @@ const validations: TValidationObject<TKeys> = {
 	update: {
 		body: Joi.object({
 			name: Joi.string().min(3).required(),
-			phoneNumber: Joi.string().required(),
+			phone_number: Joi.string().required(),
 			bio: Joi.string().min(10).max(256).required(),
 		}),
 	},

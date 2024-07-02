@@ -3,13 +3,7 @@ import { inject, injectable } from "tsyringe";
 import { IProfilesRepository } from "../repositories/profiles/IProfilesRepository";
 import { ICacheProvider } from "@shared/containers/providers/CacheProvider/models/ICacheProvider";
 import { TProfile } from "../repositories/profiles/types";
-import {
-	APP_SERVER_HOST,
-	APP_SERVER_PORT,
-	S3_BUCKET_NAME,
-	S3_BUCKET_REGION,
-	STORAGE_DRIVER,
-} from "@shared/env";
+import generateAvatarURL from "@shared/utils/functions/generateAvatarURL";
 
 interface IRequest {
 	userId: string;
@@ -25,7 +19,7 @@ class FindProfileService {
 		private cacheProvider: ICacheProvider,
 	) {}
 
-	async execute(data: IRequest, storageDriver = STORAGE_DRIVER) {
+	async execute(data: IRequest) {
 		const profileCacheKey = `profiles:${data.userId}`;
 		const cacheDataTTL = await this.cacheProvider.recoverTTL(profileCacheKey);
 		const cacheData = await this.cacheProvider.recover(profileCacheKey);
@@ -42,15 +36,8 @@ class FindProfileService {
 			throw new ProfileNotFoundError();
 		}
 
-		switch (storageDriver) {
-			case "disk": {
-				profile.avatar = `${APP_SERVER_HOST}:${APP_SERVER_PORT}/static/${profile.avatar}`;
-				break;
-			}
-			case "s3": {
-				profile.avatar = `https://${S3_BUCKET_NAME}.s3.${S3_BUCKET_REGION}.amazonaws.com/${profile.avatar}`;
-				break;
-			}
+		if (profile.avatar) {
+			profile.avatar = generateAvatarURL(profile.avatar);
 		}
 
 		await this.saveOnCache(profile);

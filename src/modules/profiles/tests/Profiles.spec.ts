@@ -49,6 +49,7 @@ describe("Profiles tests", () => {
 		updateProfileAvatarService = new UpdateProfileAvatarService(
 			fakeProfilesRepository,
 			fakeStorageProvider,
+			fakeCacheProvider,
 		);
 	});
 
@@ -158,27 +159,6 @@ describe("Profiles tests", () => {
 		).resolves.toHaveProperty("id");
 	});
 
-	it("Should find profile on database in production - Amazon S3", async () => {
-		const { id: userId } = await createFakeUser(fakeUsersRepository);
-
-		await createFakeProfile(
-			userId,
-			fakeUsersRepository,
-			fakeProfilesRepository,
-		);
-
-		await updateProfileAvatarService.execute({
-			userId,
-			avatar: "profile-picture",
-		});
-
-		const profile = await findProfileService.execute({ userId }, "s3");
-
-		if (!profile.avatar) throw Error("Profile should be found.");
-
-		expect(profile.avatar.includes("amazonaws.com")).toBe(true);
-	});
-
 	it("Should save profile on cache", async () => {
 		const saveCacheFunction = jest.spyOn(fakeCacheProvider, "save");
 		const { id: userId } = await createFakeUser(fakeUsersRepository);
@@ -240,5 +220,25 @@ describe("Profiles tests", () => {
 		expect(
 			findProfileService.execute({ userId: "non-existent-user-id" }),
 		).rejects.toBeInstanceOf(ProfileNotFoundError);
+	});
+
+	// Finding avatar
+	it("Should find profile with avatar", async () => {
+		const user = await createFakeUser(fakeUsersRepository);
+
+		await createFakeProfile(
+			user.id,
+			fakeUsersRepository,
+			fakeProfilesRepository,
+		);
+
+		await updateProfileAvatarService.execute({
+			userId: user.id,
+			avatar: "profile.pic",
+		});
+
+		expect(
+			findProfileService.execute({ userId: user.id }),
+		).resolves.toHaveProperty("avatar");
 	});
 });
