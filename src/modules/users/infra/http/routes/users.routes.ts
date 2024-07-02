@@ -12,8 +12,8 @@ const usersController = new UsersController();
 
 usersRouter.post(
 	"/create",
-	validate(validations.create),
-	usersController.create,
+	validate(validations.createWithProfile),
+	usersController.createWithProfile,
 );
 
 usersRouter.delete(
