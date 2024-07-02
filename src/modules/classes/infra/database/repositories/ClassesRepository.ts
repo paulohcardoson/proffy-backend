@@ -21,7 +21,7 @@ class ClassesRepository implements IClassesRepository {
 			where: {
 				subject,
 				classSchedule: {
-					every: {
+					some: {
 						weekDay,
 						from: { lte: time },
 						to: { gte: time },

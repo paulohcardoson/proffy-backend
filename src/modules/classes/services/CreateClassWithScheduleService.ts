@@ -1,20 +1,26 @@
 import { inject, injectable } from "tsyringe";
 
+// Errors
+import AppError from "@shared/errors/AppError";
 import ProfileNotFoundError from "@shared/errors/app/ProfileNotFoundError";
-import { IClassesRepository } from "../repositories/classes/IClassesRepository";
+
+// Types
+import { IClassesRepository } from "@modules/classes/repositories/classes/IClassesRepository";
 import { IProfilesRepository } from "@modules/profiles/repositories/profiles/IProfilesRepository";
 import { IClassesSchedulesRepository } from "../repositories/classes-schedules/IClassesSchedulesRepository";
+import { TSchedule } from "../types/TSchedule";
+import { TScheduleRequest } from "../types/TScheduleRequest";
+import { IPeriod } from "../types/IPeriod";
+
+// Utils
 import checkIfPeriodsOfTimeCollapse from "@shared/utils/functions/checkIfPeriodsOfTimeCollapse";
 import transformHoursAndMinutesStringToMinutes from "@shared/utils/functions/transformHoursAndMinutesStringToMinutes";
-import AppError from "@shared/errors/AppError";
-import { IClassSchedule } from "../repositories/classes-schedules/types";
-import { IScheduleRequest } from "../types/IScheduleRequest";
 
 interface IRequest {
 	userId: string;
 	subject: string;
 	cost: number;
-	schedule: IScheduleRequest[];
+	schedule: TScheduleRequest;
 }
 
 interface ICreateClassRequest {
@@ -25,7 +31,7 @@ interface ICreateClassRequest {
 
 interface ICreateClassScheduleRequest {
 	classId: string;
-	schedule: IScheduleRequest[];
+	schedule: TSchedule;
 }
 
 @injectable()
@@ -41,7 +47,12 @@ class CreateClassWithScheculeService {
 		private classesSchedulesRepository: IClassesSchedulesRepository,
 	) {}
 
-	async execute({ userId, subject, cost, schedule }: IRequest) {
+	async execute({
+		userId,
+		subject,
+		cost,
+		schedule: scheduleRequest,
+	}: IRequest) {
 		const profile = await this.profilesRepository.findByUserId(userId, {
 			select: { id: true },
 		});
@@ -49,6 +60,12 @@ class CreateClassWithScheculeService {
 		if (!profile) {
 			throw new ProfileNotFoundError();
 		}
+
+		const schedule: TSchedule = scheduleRequest.map((period) => ({
+			weekDay: period.week_day,
+			from: transformHoursAndMinutesStringToMinutes(period.from),
+			to: transformHoursAndMinutesStringToMinutes(period.to),
+		}));
 
 		const isScheduleValid = this.checkIfScheduleIsValid(schedule);
 
@@ -68,7 +85,7 @@ class CreateClassWithScheculeService {
 		return createdClass;
 	}
 
-	async createClass({ profileId, subject, cost }: ICreateClassRequest) {
+	private async createClass({ profileId, subject, cost }: ICreateClassRequest) {
 		const class_ = await this.classesRepository.save({
 			profileId,
 			subject,
@@ -78,60 +95,42 @@ class CreateClassWithScheculeService {
 		return class_;
 	}
 
-	async createClassSchedule({
+	private async createClassSchedule({
 		classId,
 		schedule,
 	}: ICreateClassScheduleRequest) {
-		const schedulesFormatedToDatabaseSchema: IClassSchedule[] = schedule.map(
-			(period) => ({
-				from: transformHoursAndMinutesStringToMinutes(period.from),
-				to: transformHoursAndMinutesStringToMinutes(period.to),
-				weekDay: period.week_day,
-			}),
-		);
-
 		await this.classesSchedulesRepository.createMany({
 			classId,
-			schedule: schedulesFormatedToDatabaseSchema,
+			schedule,
 		});
 	}
 
-	checkIfScheduleIsValid(schedule: IScheduleRequest[]) {
-		const isScheduleValid = schedule.some((period, index) => {
-			const scheduleAsNumbers = {
-				from: transformHoursAndMinutesStringToMinutes(period.from),
-				to: transformHoursAndMinutesStringToMinutes(period.to),
-			};
+	private checkIfScheduleIsValid(schedule: TSchedule) {
+		const isInvalid = schedule.some((period, index) => {
+			const periodIsValid = this.checkIfPeriodIsValid(period);
 
-			const scheduleToVerify = schedule.filter((_period, periodIndex) => {
-				const hasAlreadyBeenVerified = index > periodIndex;
+			if (!periodIsValid) return true;
 
-				if (hasAlreadyBeenVerified) return false;
+			const periodsToVerify = schedule.filter((_period, periodIndex) => {
+				if (index >= periodIndex) return false;
 
-				const isNotTheSameSchedule = _period !== period;
-				const isOnTheSameDay = _period.week_day === period.week_day;
+				const isOnSameDay = period.weekDay === _period.weekDay;
 
-				return isNotTheSameSchedule && isOnTheSameDay;
+				return isOnSameDay;
 			});
 
-			const isScheduleInvalid = scheduleToVerify.some((periodToVerify) => {
-				const scheduleToVerifyAsNumbers = {
-					from: transformHoursAndMinutesStringToMinutes(periodToVerify.from),
-					to: transformHoursAndMinutesStringToMinutes(periodToVerify.to),
-				};
-
-				const doesPeriodsCollapse = checkIfPeriodsOfTimeCollapse(
-					scheduleAsNumbers,
-					scheduleToVerifyAsNumbers,
-				);
-
-				return doesPeriodsCollapse;
-			});
-
-			return isScheduleInvalid;
+			return periodsToVerify.some((_period) =>
+				checkIfPeriodsOfTimeCollapse(period, _period),
+			);
 		});
 
-		return !isScheduleValid;
+		return !isInvalid;
+	}
+
+	private checkIfPeriodIsValid(period: IPeriod) {
+		if (period.from >= period.to) return false;
+
+		return true;
 	}
 }
 

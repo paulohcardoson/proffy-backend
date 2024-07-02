@@ -6,21 +6,31 @@ import FindClassesService from "../services/FindClassesService";
 import createFakeClass, { fakeClassData } from "./functions/createFakeClass";
 import createFakeProfile from "@modules/profiles/tests/functions/createFakeProfile";
 import createFakeUser from "@modules/users/tests/functions/createFakeUser";
+import FakeClassesSchedulesRepository from "../repositories/classes/fakes/FakeClassesSchedulesRepository";
+import CreateClassWithScheculeService from "../services/CreateClassWithScheduleService";
 
 // Repositories
 let fakeClassesRepository: FakeClassesRepository;
+let fakeClassesSchedulesRepository: FakeClassesSchedulesRepository;
 let fakeUsersRepository: FakeUsersRepository;
 let fakeProfilesRepository: FakeProfilesRepository;
 
 // Services
+let createClassWithScheculeService: CreateClassWithScheculeService;
 let findClassesService: FindClassesService;
 
 describe("Classes tests", () => {
 	beforeEach(() => {
 		fakeClassesRepository = new FakeClassesRepository();
+		fakeClassesSchedulesRepository = new FakeClassesSchedulesRepository();
 		fakeUsersRepository = new FakeUsersRepository();
 		fakeProfilesRepository = new FakeProfilesRepository();
 
+		createClassWithScheculeService = new CreateClassWithScheculeService(
+			fakeProfilesRepository,
+			fakeClassesRepository,
+			fakeClassesSchedulesRepository,
+		);
 		findClassesService = new FindClassesService(fakeClassesRepository);
 	});
 
@@ -35,7 +45,12 @@ describe("Classes tests", () => {
 		);
 
 		expect(
-			createFakeClass(user.id, fakeProfilesRepository, fakeClassesRepository),
+			createFakeClass(
+				user.id,
+				fakeProfilesRepository,
+				fakeClassesRepository,
+				fakeClassesSchedulesRepository,
+			),
 		).resolves.toHaveProperty("id");
 	});
 
@@ -45,7 +60,70 @@ describe("Classes tests", () => {
 				"non-existent-user-id",
 				fakeProfilesRepository,
 				fakeClassesRepository,
+				fakeClassesSchedulesRepository,
 			),
+		).rejects.toBeInstanceOf(AppError);
+	});
+
+	it("Should not create a class - Invalid schedules", async () => {
+		const user = await createFakeUser(fakeUsersRepository);
+
+		await createFakeProfile(
+			user.id,
+			fakeUsersRepository,
+			fakeProfilesRepository,
+		);
+
+		expect(
+			createClassWithScheculeService.execute({
+				userId: user.id,
+				...fakeClassData,
+				schedule: [
+					{
+						week_day: 1,
+						from: "08:00",
+						to: "07:00",
+					},
+				],
+			}),
+		).rejects.toBeInstanceOf(AppError);
+
+		expect(
+			createClassWithScheculeService.execute({
+				userId: user.id,
+				...fakeClassData,
+				schedule: [
+					{
+						week_day: 1,
+						from: "08:00",
+						to: "12:00",
+					},
+					{
+						week_day: 1,
+						from: "09:00",
+						to: "11:00",
+					},
+				],
+			}),
+		).rejects.toBeInstanceOf(AppError);
+
+		expect(
+			createClassWithScheculeService.execute({
+				userId: user.id,
+				...fakeClassData,
+				schedule: [
+					{
+						week_day: 1,
+						from: "08:00",
+						to: "12:00",
+					},
+					{
+						week_day: 1,
+						from: "12:00",
+						to: "16:00",
+					},
+				],
+			}),
 		).rejects.toBeInstanceOf(AppError);
 	});
 
@@ -63,11 +141,12 @@ describe("Classes tests", () => {
 			user.id,
 			fakeProfilesRepository,
 			fakeClassesRepository,
+			fakeClassesSchedulesRepository,
 		);
 
 		const classes = await findClassesService.execute({
 			subject: fakeClassData.subject,
-			time: "08:00",
+			time: "09:00",
 			weekDay: 1,
 		});
 

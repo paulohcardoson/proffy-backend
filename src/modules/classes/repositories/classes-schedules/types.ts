@@ -14,5 +14,5 @@ export interface ICreateClassScheduleRequest extends IClassSchedule {
 
 export interface ICreateManyClassScheduleRequest {
 	classId: string;
-	schedules: IClassSchedule[];
+	schedule: IClassSchedule[];
 }

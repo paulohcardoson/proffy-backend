@@ -2,12 +2,12 @@ import { Request, Response } from "express";
 import { container } from "tsyringe";
 
 import CreateClassWithScheculeService from "@modules/classes/services/CreateClassWithScheduleService";
-import { IScheduleRequest } from "@modules/classes/types/IScheduleRequest";
+import { TScheduleRequest } from "@modules/classes/types/TScheduleRequest";
 
 interface ICreateRequestBody {
 	subject: string;
 	cost: number;
-	schedule: IScheduleRequest[];
+	schedule: TScheduleRequest;
 }
 
 class ClassesWithScheduleController {

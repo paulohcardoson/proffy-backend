@@ -1,7 +1,7 @@
 import { TValidationObject } from "@shared/types/TValidationObject";
 import { Joi } from "express-validation";
 
-type TKeys = "find" | "create";
+type TKeys = "find" | "createWithSchedule";
 
 const validations: TValidationObject<TKeys> = {
 	find: {
@@ -13,7 +13,7 @@ const validations: TValidationObject<TKeys> = {
 				.required(),
 		}),
 	},
-	create: {
+	createWithSchedule: {
 		body: Joi.object({
 			subject: Joi.string().required(),
 			cost: Joi.number().min(1).max(10000).required(),

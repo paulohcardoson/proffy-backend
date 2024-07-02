@@ -13,10 +13,10 @@ class ClassesSchedulesRepository implements IClassesSchedulesRepository {
 	}
 
 	async createMany(data: ICreateManyClassScheduleRequest) {
-		const { classId, schedules } = data;
+		const { classId, schedule } = data;
 
 		await this.repository.createMany({
-			data: schedules.map((schedule) => ({ classId, ...schedule })),
+			data: schedule.map((period) => ({ classId, ...period })),
 		});
 	}
 

@@ -23,15 +23,15 @@ class FakeClassesSchedulesRepository implements IClassesSchedulesRepository {
 	}
 
 	async createMany(data: ICreateManyClassScheduleRequest) {
-		const { classId, schedules } = data;
+		const { classId, schedule } = data;
 
-		schedules.map((schedule) => {
+		schedule.map((period) => {
 			this.repository.push({
 				id: randomUUID(),
 				classId,
 				updatedAt: new Date(),
 				createdAt: new Date(),
-				...schedule,
+				...period,
 			});
 		});
 	}
