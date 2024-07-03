@@ -17,7 +17,7 @@ const validations: TValidationObject<TKeys> = {
 		body: Joi.object({
 			subject: Joi.string().required(),
 			cost: Joi.number().min(1).max(10000).required(),
-			schedules: Joi.array()
+			schedule: Joi.array()
 				.items(
 					Joi.object({
 						week_day: Joi.number().integer().min(1).max(7).required(),
