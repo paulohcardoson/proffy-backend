@@ -33,7 +33,7 @@ const storageConfig: IStorageConfig = {
 					const fileExtension = mime.extension(file.mimetype);
 
 					if (!fileExtension) throw new AppError("No file ex");
-					const fileName = `${fileHash}-${file.originalname}`;
+					const fileName = `${fileHash}.${fileExtension}`;
 
 					return callback(null, fileName);
 				},
